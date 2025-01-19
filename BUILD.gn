@@ -1,0 +1,68 @@
+declare_args() {
+  mds_boot_upgrade_retry = 3
+  mds_boot_check_size = 1024
+
+  mds_boot_with_copy = true
+  mds_boot_with_lzma = true
+}
+
+declare_args() {
+  if (defined(mds_boot_with_lzma) && mds_boot_with_lzma) {
+    mds_boot_lzma_read_size = 1024
+    mds_boot_lzma_write_size = 1024
+    mds_boot_lzma_dict_size = 4096
+    mds_boot_lzma_probs_size = 10112
+  }
+}
+
+pkggroup("mds_kernel") {
+}
+
+pkggroup("mds_component_algo") {
+  deps = [
+    ":crc",
+    ":sha2",
+  ]
+}
+
+if (defined(mds_boot_with_lzma) && mds_boot_with_lzma) {
+  pkggroup("lzma_sdk") {
+  }
+}
+
+config("mds_component_boot_config") {
+  include_dirs = [ "inc/" ]
+}
+
+static_library("mds_component_boot") {
+  sources = [ "src/mds_boot.c" ]
+  defines = [ "MDS_BOOT_CHECK_SIZE=" + mds_boot_check_size ]
+  deps = []
+
+  if (defined(mds_boot_upgrade_retry)) {
+    defines += [ "MDS_BOOT_UPGRADE_RETRY=" + mds_boot_upgrade_retry ]
+  }
+
+  if (defined(mds_boot_with_copy) && mds_boot_with_copy) {
+    defines += [ "MDS_BOOT_WITH_COPY=1" ]
+  }
+
+  if (defined(mds_boot_with_lzma) && mds_boot_with_lzma) {
+    sources += [ "src/boot_lzma.c" ]
+    defines += [
+      "MDS_BOOT_WITH_LZMA=1",
+      "MDS_BOOT_LZMA_READ_SIZE=" + mds_boot_lzma_read_size,
+      "MDS_BOOT_LZMA_WRITE_SIZE=" + mds_boot_lzma_write_size,
+      "MDS_BOOT_LZMA_DICT_SIZE=" + mds_boot_lzma_dict_size,
+      "MDS_BOOT_LZMA_PROBS_SIZE=" + mds_boot_lzma_probs_size,
+    ]
+    deps += [ ":lzma_sdk" ]
+  }
+
+  public_configs = [ ":mds_component_boot_config" ]
+
+  public_deps = [
+    ":mds_component_algo",
+    ":mds_kernel",
+  ]
+}
