@@ -13,8 +13,9 @@
 #define __MDS_BOOT_H__
 
 /* Include ----------------------------------------------------------------- */
-#include "mds_def.h"
-#include "algo_common.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,11 +26,21 @@ extern "C" {
 #define MDS_BOOT_SWAP_SECTION ".mds.boot"
 #endif
 
-#define MDS_BOOT_UPGRADE_MAGIC 0x9ADE
+#ifndef MDS_BOOT_UPGRADE_MAGIC
+#define MDS_BOOT_UPGRADE_MAGIC 0xBDAC9ADE
+#endif
+
+#ifndef MDS_BOOT_LOG
+#define MDS_BOOT_LOG(fmt, ...)
+#endif
 
 #define MDS_BOOT_CHKHASH_SIZE 0x20
 
 /* Typedef ----------------------------------------------------------------- */
+typedef struct {
+    void *arg;
+} MDS_BOOT_Device_t;
+
 typedef enum MDS_BOOT_Result {
     MDS_BOOT_RESULT_NONE = 0x0000,
     MDS_BOOT_RESULT_SUCCESS = 0xE000,
@@ -58,8 +69,7 @@ typedef struct MDS_BOOT_BinInfo {
 
 typedef struct MDS_BOOT_UpgradeInfo {
     uint8_t check[sizeof(uint16_t)];  // check upgradeInfo header
-    uint8_t magic[sizeof(uint16_t)];
-    uint8_t type[sizeof(uint16_t)];   // type comfired for firmware
+    uint8_t magic[sizeof(uint32_t)];  // magic for firmware check
     uint8_t count[sizeof(uint16_t)];  // count of binInfos
     uint8_t size[sizeof(uint32_t)];   // totalSize
     uint8_t hash[MDS_BOOT_CHKHASH_SIZE];
@@ -69,8 +79,7 @@ typedef struct MDS_BOOT_UpgradeInfo {
 
 typedef struct MDS_BOOT_SwapInfo {
     uint16_t check;
-    uint16_t magic;
-    uint16_t type;
+    uint32_t magic;
     uint16_t count;
     uint32_t size;
     uint8_t hash[MDS_BOOT_CHKHASH_SIZE];
@@ -82,25 +91,24 @@ typedef struct MDS_BOOT_SwapInfo {
 } MDS_BOOT_SwapInfo_t;
 
 typedef struct MDS_BOOT_UpgradeOps {
-    MDS_Err_t (*read)(MDS_Arg_t *dev, intptr_t ofs, uint8_t *data, size_t len);
-    MDS_Err_t (*write)(MDS_Arg_t *dev, intptr_t ofs, const uint8_t *data, size_t len);
-    MDS_Err_t (*erase)(MDS_Arg_t *dev);
-    bool (*compare)(const MDS_BOOT_UpgradeInfo_t *upgradeInfo);
+    int (*read)(MDS_BOOT_Device_t *dev, uintptr_t ofs, uint8_t *data, size_t len);
+    int (*write)(MDS_BOOT_Device_t *dev, uintptr_t ofs, const uint8_t *data, size_t len);
+    int (*erase)(MDS_BOOT_Device_t *dev);
 } MDS_BOOT_UpgradeOps_t;
 
 /* Function ---------------------------------------------------------------- */
-extern MDS_Err_t MDS_BOOT_UpgradeRead(MDS_Arg_t *dev, intptr_t ofs, uint8_t *buff, size_t size);
-extern MDS_Err_t MDS_BOOT_UpgradeWrite(MDS_Arg_t *dev, intptr_t ofs, const uint8_t *buff, size_t size);
-extern MDS_Err_t MDS_BOOT_UpgradeErase(MDS_Arg_t *dev);
+extern int MDS_BOOT_DeviceRead(MDS_BOOT_Device_t *dev, uintptr_t ofs, uint8_t *buff, size_t size);
+extern int MDS_BOOT_DeviceWrite(MDS_BOOT_Device_t *dev, uintptr_t ofs, const uint8_t *buff, size_t size);
+extern int MDS_BOOT_DeviceErase(MDS_BOOT_Device_t *dev);
 
-extern MDS_BOOT_Result_t MDS_BOOT_UpgradeCheck(MDS_BOOT_SwapInfo_t *swapInfo, MDS_Arg_t *dst, MDS_Arg_t *src,
-                                               const MDS_BOOT_UpgradeOps_t *ops);
+extern MDS_BOOT_Result_t MDS_BOOT_UpgradeCheck(MDS_BOOT_SwapInfo_t *swapInfo, MDS_BOOT_Device_t *dst,
+                                               MDS_BOOT_Device_t *src, const MDS_BOOT_UpgradeOps_t *ops);
 extern MDS_BOOT_SwapInfo_t *MDS_BOOT_GetSwapInfo(void);
 
-extern MDS_BOOT_Result_t MDS_BOOT_UpgradeCopy(MDS_Arg_t *dst, MDS_Arg_t *src, size_t srcOfs,
-                                              const MDS_BOOT_BinInfo_t *binInfo);
-extern MDS_BOOT_Result_t MDS_BOOT_UpgradeLzma(MDS_Arg_t *dst, MDS_Arg_t *src, size_t srcOfs,
-                                              const MDS_BOOT_BinInfo_t *binInfo);
+extern MDS_BOOT_Result_t MDS_BOOT_UpgradeCopy(MDS_BOOT_Device_t *dst, MDS_BOOT_Device_t *src, uint32_t srcOfs,
+                                              uint32_t srcSize);
+extern MDS_BOOT_Result_t MDS_BOOT_UpgradeLzma(MDS_BOOT_Device_t *dst, MDS_BOOT_Device_t *src, uint32_t srcOfs,
+                                              uint32_t srcSize);
 
 #ifdef __cplusplus
 }

@@ -15,9 +15,6 @@ declare_args() {
   }
 }
 
-pkggroup("mds_kernel") {
-}
-
 pkggroup("mds_component_algo") {
   deps = [
     ":crc",
@@ -61,8 +58,5 @@ static_library("mds_component_boot") {
 
   public_configs = [ ":mds_component_boot_config" ]
 
-  public_deps = [
-    ":mds_component_algo",
-    ":mds_kernel",
-  ]
+  public_deps = [ ":mds_component_algo" ]
 }
