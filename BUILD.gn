@@ -16,10 +16,6 @@ declare_args() {
 }
 
 pkggroup("mds_component_algo") {
-  deps = [
-    ":crc",
-    ":sha2",
-  ]
 }
 
 if (defined(mds_boot_with_lzma) && mds_boot_with_lzma) {
